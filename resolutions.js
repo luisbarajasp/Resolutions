@@ -39,6 +39,9 @@ if (Meteor.isClient) {
         Resolutions.remove(this._id);
      }
   });
+  Accounts.ui.config({
+      passwordSignupFields: "USERNAME_ONLY"
+  });
 }
 
 if (Meteor.isServer) {
