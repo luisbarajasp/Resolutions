@@ -28,9 +28,17 @@ if (Meteor.isClient) {
          Session.set('hideFinished', event.target.checked);
      }
   });
+  Template.resolution.helpers({
+     isOwner: function(){
+         return this.owner === Meteor.userId();
+     }
+  });
   Template.resolution.events({
      'click .toggle-checked': function(){
-         Meteor.call("updateResolution",this._id,!this.checked)
+         Meteor.call("updateResolution",this._id,!this.checked);
+     },
+     'click .toggle-private': function(){
+         Meteor.call("setPrivate",this._id,!this.private);
      },
      'click .delete': function(){
         Meteor.call("deleteResolution",this._id);
@@ -47,7 +55,12 @@ if (Meteor.isServer) {
   });
 
   Meteor.publish("resolutions", function(){
-     return Resolutions.find();
+     return Resolutions.find({
+         $or: [
+             { private: {$ne: true} },
+             { owner: this.userId }
+         ]
+     });
   });
 }
 
@@ -55,15 +68,39 @@ Meteor.methods({
     addResolution: function(title){
         Resolutions.insert({
            title: title,
-           createdAt: new Date()
+           createdAt: new Date(),
+           owner: Meteor.userId()
         });
     },
     deleteResolution: function(id){
+        var res = Resolutions.findOne(id);
+
+        if(res.owner !== Meteor.userId()){
+            throw new Meteor.Error('not-authorized');
+        }
+
         Resolutions.remove(id);
     },
     updateResolution: function(id, checked){
+        var res = Resolutions.findOne(id);
+
+        if(res.owner !== Meteor.userId()){
+            throw new Meteor.Error('not-authorized');
+        }
+        
         Resolutions.update(id, {$set:{
             checked: checked
+        }});
+    },
+    setPrivate: function(id, private){
+        var res = Resolutions.findOne(id);
+
+        if(res.owner !== Meteor.userId()){
+            throw new Meteor.Error('not-authorized');
+        }
+
+        Resolutions.update(id, {$set:{
+            private: private
         }});
     }
 });
